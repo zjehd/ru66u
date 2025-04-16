@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>هۆستکردنی بۆتی تێلێگرام</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>هۆستکردنی بۆتی تێلێگرام</h1>
+        
+        <div class="upload-section">
+            <h2>بارکردنی بۆت</h2>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label for="bot_file">فایلی بۆت (Python):</label>
+                    <input type="file" id="bot_file" name="bot_file" accept=".py" required>
+                </div>
+                <div class="form-group">
+                    <label for="bot_token">تووکنی بۆت:</label>
+                    <input type="text" id="bot_token" name="bot_token" required>
+                </div>
+                <button type="submit">بارکردنی بۆت</button>
+            </form>
+        </div>
+        
+        <div class="bot-list">
+            <h2>بۆتەکان</h2>
+            <button id="refreshBtn">نوێکردنەوە</button>
+            <div id="botsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // بارکردنی بۆت
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('bot_file', document.getElementById('bot_file').files[0]);
+            formData.append('bot_token', document.getElementById('bot_token').value);
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(data.message);
+                    loadBots();
+                } else {
+                    alert(data.error);
+                }
+            } catch (error) {
+                alert('هەڵەی پەیوەندی: ' + error);
+            }
+        });
+
+        // نوێکردنەوەی لیستی بۆتەکان
+        async function loadBots() {
+            try {
+                const response = await fetch('/list');
+                const data = await response.json();
+                
+                const container = document.getElementById('botsContainer');
+                container.innerHTML = '';
+                
+                if (data.bots.length === 0) {
+                    container.innerHTML = '<p>هیچ بۆتێک بارنەکراوە</p>';
+                    return;
+                }
+                
+                data.bots.forEach(bot => {
+                    const botDiv = document.createElement('div');
+                    botDiv.className = 'bot-item';
+                    
+                    botDiv.innerHTML = `
+                        <h3>${bot.name}</h3>
+                        <p>دۆخ: <span class="${bot.status === 'چالاکە' ? 'active' : 'inactive'}">${bot.status}</span></p>
+                        <div class="bot-actions">
+                            ${bot.status === 'چالاکە' ? 
+                                '<button onclick="stopBot(\'${bot.name}\')">وەستان</button>' : 
+                                '<button onclick="startBot(\'${bot.name}\')">دەستپێکردن</button>'}
+                        </div>
+                    `;
+                    
+                    container.appendChild(botDiv);
+                });
+            } catch (error) {
+                console.error('هەڵە لە وەرگرتنی لیستی بۆتەکان:', error);
+            }
+        }
+
+        // دەستپێکردنی بۆت
+        async function startBot(filename) {
+            try {
+                const response = await fetch('/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ filename })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(data.message);
+                    loadBots();
+                } else {
+                    alert(data.error);
+                }
+            } catch (error) {
+                alert('هەڵەی پەیوەندی: ' + error);
+            }
+        }
+
+        // وەستانەوەی بۆت
+        async function stopBot(filename) {
+            try {
+                const response = await fetch('/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ filename })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(data.message);
+                    loadBots();
+                } else {
+                    alert(data.error);
+                }
+            } catch (error) {
+                alert('هەڵەی پەیوەندی: ' + error);
+            }
+        }
+
+        // نوێکردنەوەی لیست
+        document.getElementById('refreshBtn').addEventListener('click', loadBots);
+        
+        // بارکردنی سەرەتایی
+        loadBots();
+    </script>
+</body>
+</html>
